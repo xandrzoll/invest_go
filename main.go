@@ -11,7 +11,7 @@ func main() {
 
 	investService := moex.NewMoexApiService()
 	securities := investService.GetSecuritiesList()
-	data, err := investService.FetchCandles(
+	data, err := investService.FetchCandlesAsync(
 		securities,
 		"2025-02-10",
 		"2025-02-10",

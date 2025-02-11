@@ -6,6 +6,7 @@ import (
 	"invest/src/moex_service/models"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -30,10 +31,82 @@ func (s *MoexApiService) GetSecuritiesList() []models.Security {
 	var securities []models.Security
 
 	securities = append(securities,
-		models.Security{Ticker: "SBER", Name: "Sberbank", Engine: "stock", Market: "shares", Board: "TQBR"},
+		models.Security{Ticker: "SBER", Name: "Сбербанк", Engine: "stock", Market: "shares", Board: "TQBR"},
 	)
 	securities = append(securities,
-		models.Security{Ticker: "ABIO", Name: "Artgen", Engine: "stock", Market: "shares", Board: "TQBR"},
+		models.Security{Ticker: "ABIO", Name: "Артген", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "AFLT", Name: "Аэрофлот", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "ALRS", Name: "Алроса", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "DATA", Name: "Аренадата", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "DIAS", Name: "Диасофт", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "ETLN", Name: "Эталон", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "FESH", Name: "ДВМП", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "GAZP", Name: "Газпром", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "GMKN", Name: "НорНикель", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "HNFG", Name: "Хэндерсон", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "HYDR", Name: "РусГидро", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "IRAO", Name: "ИнтерРао", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "LKOH", Name: "Лукойл", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "MBNK", Name: "МТС Банк", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "MTSS", Name: "МТС", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "NLMK", Name: "НЛМК", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "NVTK", Name: "Новатэк", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "PHOR", Name: "Фосагро", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "POSI", Name: "Позитив", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "ROSN", Name: "Роснефть", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "RTKM", Name: "Ростелеком", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "RUAL", Name: "Русал", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "SFIN", Name: "ЭсЭфАй", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "SNGS", Name: "Сургут", Engine: "stock", Market: "shares", Board: "TQBR"},
+	)
+	securities = append(securities,
+		models.Security{Ticker: "SNGSP", Name: "Сургут Преф", Engine: "stock", Market: "shares", Board: "TQBR"},
 	)
 	return securities
 }
@@ -117,5 +190,53 @@ func (s *MoexApiService) FetchCandles(
 			}
 		}
 	}
+	return candleResp, nil
+}
+
+func (s *MoexApiService) FetchCandlesAsync(
+	securities []models.Security, dttmFrom string, dttmTill string, interval int) ([]models.Candle, error) {
+
+	var candleResp []models.Candle
+
+	var wg sync.WaitGroup
+
+	for _, security := range securities {
+		wg.Add(1)
+		go func(security models.Security) {
+			defer wg.Done()
+			start := 0
+			fmt.Println("Start requests for:", security.Ticker)
+			for {
+				<-s.rateLimiter.C
+				resp, err := s.fetchCandles(
+					security.Engine,
+					security.Market,
+					security.Board,
+					security.Ticker,
+					dttmFrom,
+					dttmTill,
+					interval,
+					start)
+
+				if err != nil {
+					fmt.Printf("Error fetching candles for security %s: %v\n", security.Ticker, err)
+					return
+				}
+				lenData := len(resp.Candles.Data)
+				if lenData > 0 {
+					start += lenData
+					candles, err := s.parseCandlesResponse(security.Ticker, resp)
+					if err != nil {
+						fmt.Println("Error parsing candles:", err)
+						break
+					}
+					candleResp = append(candleResp, candles...)
+				} else {
+					break
+				}
+			}
+		}(security)
+	}
+	wg.Wait()
 	return candleResp, nil
 }
