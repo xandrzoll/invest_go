@@ -4,6 +4,8 @@ import (
 	"encoding/csv"
 	"fmt"
 	moex "invest/src/moex_service"
+	pg "invest/src/storage"
+	"log"
 	"os"
 )
 
@@ -32,7 +34,7 @@ func main() {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	header := []string{"Ticker", "Open", "Close", "High", "Low", "Value", "Volume", "Begin", "End"}
+	header := []string{"Ticker", "Open", "Close", "High", "Low", "Volume", "Begin"}
 	if err := writer.Write(header); err != nil {
 		fmt.Println("Error writing CSV header:", err)
 		return
@@ -45,7 +47,7 @@ func main() {
 			fmt.Sprintf("%f", candle.Close),
 			fmt.Sprintf("%f", candle.High),
 			fmt.Sprintf("%f", candle.Low),
-			fmt.Sprintf("%f", candle.Value),
+			//fmt.Sprintf("%f", candle.Value),
 			fmt.Sprintf("%f", candle.Volume),
 			fmt.Sprintf("%s", candle.Timestamp),
 		}
@@ -56,4 +58,19 @@ func main() {
 	}
 
 	fmt.Println("Data successfully saved to candles_data.csv")
+
+	connStr := "postgres://invest_user:invest_password@localhost:5432/invest"
+	pgService, err := pg.NewPostgreService(connStr)
+	if err != nil {
+		log.Fatalf("Failed to create PostgreService: %v\n", err)
+	}
+	defer pgService.Close()
+
+	batchSize := 500
+	err = pgService.InsertCandles(data, batchSize)
+	if err != nil {
+		log.Fatalf("Failed to insert candles: %v\n", err)
+	}
+
+	log.Println("All candles inserted successfully")
 }

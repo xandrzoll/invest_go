@@ -140,12 +140,12 @@ func (s *MoexApiService) parseCandlesResponse(security string, candlesResp model
 
 	for _, data := range candlesResp.Candles.Data {
 		candle := models.Candle{
-			Security:  security,
-			Open:      data[0].(float64),
-			Close:     data[1].(float64),
-			High:      data[2].(float64),
-			Low:       data[3].(float64),
-			Value:     data[4].(float64),
+			Security: security,
+			Open:     data[0].(float64),
+			Close:    data[1].(float64),
+			High:     data[2].(float64),
+			Low:      data[3].(float64),
+			//Value:     data[4].(float64),
 			Volume:    data[5].(float64),
 			Timestamp: data[6].(string),
 		}
